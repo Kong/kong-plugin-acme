@@ -1,4 +1,5 @@
 local client = require "kong.plugins.acme.client"
+local http = require "resty.http"
 
 local function find_plugin()
   local iter = kong.db.plugins:each()
@@ -28,12 +29,35 @@ return {
       end
       local conf = plugin.config
 
-      -- sanity check for kong setup?
-
       local host = self.params.host
       if not host or type(host) ~= "string" then
         return kong.response.exit(400, { message = "host must be provided and containing a single domain" })
       end
+
+      -- we don't allow port for security reason in test_only mode
+      if string.find(host, ":") ~= nil then
+        return kong.response.exit(400, { message = "port is not allowed in host" })
+      end
+
+      if self.params.test_only then
+        local check_path = string.format("http://%s/.well-known/acme-challenge/", host)
+        local httpc = http.new()
+        local res, err = httpc:request_uri(check_path .. "x")
+        if not err then
+          if ngx.re.match("no Route matched with those values", res.body) then
+            err = check_path .. "* doesn't map to a route in Kong"
+          elseif res.body ~= "Not found\n" then
+            err = "unexpected response found :" .. (res.body or "<nil>")
+            if res.status ~= 404 then
+              err = err .. string.format(", unexpected status code: %d", res.status)
+            end
+          else
+            return kong.response.exit(200, { message = "sanity test for host " .. host .. " passed"})
+          end
+        end
+        return kong.response.exit(400, { message = "problem found running sanity check for " .. host .. ": " .. err})
+      end
+
       err = client.update_certificate(conf, host, nil)
       if err then
         return kong.response.exit(500, { message = "failed to update certificate: " .. err })

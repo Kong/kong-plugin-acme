@@ -20,6 +20,7 @@ set `KONG_LUA_SSL_TRUSTED_CERTIFICATE` as environment instead of changing `kong.
 For all the domains that you need to get certificate, make sure `DOMAIN/.well-known/acme-challenge`
 is mapped to a Route in Kong. You can check this by sending
 `curl KONG_IP/.well-known/acme-challenge/x -H "host:DOMAIN"` and expect a response `Not found`.
+From plugin version 0.2.4, you can also [use the Admin API](#create-certificates) to
 If not, add a Route and a dummy Service to catch this route.
 ```bash
 # add a dummy service if needed
@@ -49,7 +50,7 @@ Note by setting `tos_accepted` to *true* implies that you have read and accepted
 and terminates challenge only for certain domains, please refer to the
 [Plugin Config](#plugin-config) section.
 
-#### Creation of certificate
+#### Create certificates
 
 Assume Kong proxy is accessible via http://mydomain.com and https://mydomain.com.
 
@@ -63,11 +64,14 @@ $ curl https://mydomain.com -k
 # User can also use this endpoint to force "renew" a certificate
 $ curl http://localhost:8001/acme/create -d host=mydomain.com
 
+# Furthermore, it's possible to run sanity test before creating any certificate
+$ curl http://localhost:8001/acme/create -d host=mydomain.com -d test_only=1
+
 $ curl https://mydomain.com
 # Now gives you a valid Let's Encrypt certicate
 ```
 
-#### Renewal of certificate
+#### Renew certificates
 
 The plugin automatically renews all certificate that are due for renewal everyday. Note the
 renewal config is stored in configured storage backend. If the storage is cleared or modified
