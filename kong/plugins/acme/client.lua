@@ -234,7 +234,6 @@ local function update_certificate(conf, host, key)
   return err
 end
 
-
 local function renew_certificate_storage(conf)
   local _, st, err = new_storage_adapter(conf)
   if err then
@@ -351,10 +350,14 @@ local function renew_certificate(premature)
     return
   end
 
-  for plugin, err in kong.db.plugins:each(1000,
-        { cache_key = "acme", }) do
+  local iter = kong.db.plugins:each()
+  while true do
+    local plugin, err = iter()
     if err then
       kong.log.warn("error fetching plugin: ", err)
+    end
+    if not plugin then
+      return
     end
 
     if plugin.name ~= "acme" then

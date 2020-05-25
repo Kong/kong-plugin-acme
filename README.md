@@ -10,7 +10,7 @@ and serve dynamically. Renewal is handled with a configurable threshold time.
 #### Configure Kong
 
 - Kong needs to listen 80 port or proxied by a load balancer that listens for 80 port.
-- `nginx_proxy_lua_ssl_trusted_certificate` needs to be set in `kong.conf` to ensure the plugin can properly
+- `lua_ssl_trusted_certificate` needs to be set in `kong.conf` to ensure the plugin can properly
 verify Let's Encrypt API. The CA-bundle file is usually `/etc/ssl/certs/ca-certificates.crt` for
 Ubuntu/Debian and `/etc/ssl/certs/ca-bundle.crt` for CentOS/Fedora/RHEL. If you are using Kong with Docker you can also 
 set `KONG_LUA_SSL_TRUSTED_CERTIFICATE` as environment instead of changing `kong.conf`.
@@ -49,16 +49,35 @@ Note by setting `tos_accepted` to *true* implies that you have read and accepted
 and terminates challenge only for certain domains, please refer to the
 [Plugin Config](#plugin-config) section.
 
-#### Trigger creation of certificate
+#### Creation of certificate
 
 Assume Kong proxy is accessible via http://mydomain.com and https://mydomain.com.
 
 ```bash
+# Trigger asynchronous creation from proxy requests
+# The following request returns immediately with Kong's default certificate
+# Wait up to 1 minute for the background process to finish
 $ curl https://mydomain.com -k
-# Returns Kong's default certificate
-# Wait up to 1 minute
+
+# OR create from Admin API with version >= 0.2.4
+# User can also use this endpoint to force "renew" a certificate
+$ curl http://localhost:8001/acme/create -d host=mydomain.com
+
 $ curl https://mydomain.com
 # Now gives you a valid Let's Encrypt certicate
+```
+
+#### Renewal of certificate
+
+The plugin automatically renews all certificate that are due for renewal everyday. Note the
+renewal config is stored in configured storage backend. If the storage is cleared or modified
+outside of Kong, renewal might not properly.
+
+It's also possible to actively trigger the renewal starting version 0.2.4. The following request
+schedules renewal in background and return immediately.
+
+```bash
+$ curl http://localhost:8001/acme/renew -XPOST
 ```
 
 ### Plugin Config
