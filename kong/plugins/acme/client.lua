@@ -350,23 +350,15 @@ local function renew_certificate(premature)
     return
   end
 
-  local iter = kong.db.plugins:each()
-  while true do
-    local plugin, err = iter()
+  for plugin, err in kong.db.plugins:each(1000) do
     if err then
       kong.log.warn("error fetching plugin: ", err)
     end
-    if not plugin then
-      return
-    end
 
-    if plugin.name ~= "acme" then
-      goto plugin_iterator_continue
+    if plugin.name == "acme" then
+      kong.log.info("renew storage configured in acme plugin: ", plugin.id)
+      renew_certificate_storage(plugin.config)
     end
-
-    kong.log.info("renew storage configured in acme plugin: ", plugin.id)
-    renew_certificate_storage(plugin.config)
-::plugin_iterator_continue::
   end
 end
 

@@ -2,14 +2,9 @@ local client = require "kong.plugins.acme.client"
 local http = require "resty.http"
 
 local function find_plugin()
-  local iter = kong.db.plugins:each()
-  while true do
-    local plugin, err = iter()
+  for plugin, err in kong.db.plugins:each(1000) do
     if err then
       return nil, err
-    end
-    if not plugin then
-      return
     end
 
     if plugin.name == "acme" then
