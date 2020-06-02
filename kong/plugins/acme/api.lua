@@ -14,7 +14,7 @@ local function find_plugin()
 end
 
 return {
-  ["/acme/create"] = {
+  ["/acme/order"] = {
     POST = function(self)
       local plugin, err = find_plugin()
       if err then
@@ -34,7 +34,7 @@ return {
         return kong.response.exit(400, { message = "port is not allowed in host" })
       end
 
-      if self.params.test_only then
+      if self.params.test_http_challenge_flow == "true" then
         local check_path = string.format("http://%s/.well-known/acme-challenge/", host)
         local httpc = http.new()
         local res, err = httpc:request_uri(check_path .. "x")
