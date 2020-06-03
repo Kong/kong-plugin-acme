@@ -14,7 +14,7 @@ local function find_plugin()
 end
 
 return {
-  ["/acme/order"] = {
+  ["/acme"] = {
     POST = function(self)
       local plugin, err = find_plugin()
       if err then
@@ -64,12 +64,10 @@ return {
       local msg = "certificate for host " .. host .. " is created"
       return kong.response.exit(201, { message = msg })
     end,
-  },
 
-  ["/acme/renew"] = {
-    POST = function()
+    PATCH = function()
       client.renew_certificate()
-      return kong.response.exit(202)
+      return kong.response.exit(202, { message = "Renewal process started successfully" })
     end,
   },
 }
