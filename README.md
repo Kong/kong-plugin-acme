@@ -50,6 +50,36 @@ Note by setting `tos_accepted` to *true* implies that you have read and accepted
 and terminates challenge only for certain domains, please refer to the
 [Plugin Config](#plugin-config) section.
 
+Sample declarative configuration with `redis` as storage:
+
+```yaml
+_format_version: "1.1"
+# this section is not necessary if there's already a route that matches
+# /.well-known/acme-challenge path with http protocol
+services:
+  - name: acme-dummy
+    url: http://127.0.0.1:65535
+    routes:
+      - name: acme-dummy
+        protocols:
+          - http
+        paths:
+          - /.well-known/acme-challenge
+plugins:
+  - name: acme
+    config:
+      account_email: example@myexample.com
+      domains:
+        - "*.example.com"
+        - "example.com"
+      tos_accepted: true
+      storage: redis
+      storage_config:
+        redis:
+          host: redis.service
+          port: 6379
+```
+
 #### Create certificates
 
 Assume Kong proxy is accessible via http://mydomain.com and https://mydomain.com.
