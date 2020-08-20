@@ -1,7 +1,8 @@
 package = "kong-plugin-acme"
-version = "0.2.2-2"
+version = "0.2.10-1"
 source = {
-   url = "git+https://github.com/Kong/kong-plugin-acme.git"
+   url = "git+https://github.com/Kong/kong-plugin-acme.git",
+   tag = "0.2.10",
 }
 description = {
    homepage = "https://github.com/Kong/kong-plugin-acme",
@@ -11,6 +12,7 @@ description = {
 build = {
    type = "builtin",
    modules = {
+      ["kong.plugins.acme.api"] = "kong/plugins/acme/api.lua",
       ["kong.plugins.acme.client"] = "kong/plugins/acme/client.lua",
       ["kong.plugins.acme.daos"] = "kong/plugins/acme/daos.lua",
       ["kong.plugins.acme.handler"] = "kong/plugins/acme/handler.lua",
