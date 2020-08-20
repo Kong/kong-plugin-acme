@@ -13,4 +13,18 @@ return {
       { created_at = typedefs.auto_timestamp_s },
     },
   },
+
+  acme_domain = {
+    primary_key = { "id" },
+    cache_key = { "name" },
+    endpoint_key = "name",
+    generate_admin_api = true,
+    admin_api_name = "acme-domains",
+    name = "acme_domain",
+    fields = {
+      { id = typedefs.uuid },
+      { name = { type = "string", required = true, unique = true }, },
+      { created_at = typedefs.auto_timestamp_s },
+    },
+  },
 }
