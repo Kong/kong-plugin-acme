@@ -10,16 +10,18 @@ and serve dynamically. Renewal is handled with a configurable threshold time.
 #### Configure Kong
 
 - Kong needs to listen 80 port or proxied by a load balancer that listens for 80 port.
-- `nginx_proxy_lua_ssl_trusted_certificate` needs to be set in `kong.conf` to ensure the plugin can properly
+- `lua_ssl_trusted_certificate` needs to be set in `kong.conf` to ensure the plugin can properly
 verify Let's Encrypt API. The CA-bundle file is usually `/etc/ssl/certs/ca-certificates.crt` for
 Ubuntu/Debian and `/etc/ssl/certs/ca-bundle.crt` for CentOS/Fedora/RHEL. If you are using Kong with Docker you can also 
 set `KONG_LUA_SSL_TRUSTED_CERTIFICATE` as environment instead of changing `kong.conf`.
 
 #### Enable the Plugin
 
-For all the domains that you need to get certificate, make sure `DOMAIN/.well-known/acme-challenge`
+For each the domain that needs a certificate, make sure `DOMAIN/.well-known/acme-challenge`
 is mapped to a Route in Kong. You can check this by sending
 `curl KONG_IP/.well-known/acme-challenge/x -H "host:DOMAIN"` and expect a response `Not found`.
+From plugin version 0.2.4, you can also [use the Admin API](#create-certificates) to
+verify the setup.
 If not, add a Route and a dummy Service to catch this route.
 ```bash
 # add a dummy service if needed
@@ -49,16 +51,39 @@ Note by setting `tos_accepted` to *true* implies that you have read and accepted
 and terminates challenge only for certain domains, please refer to the
 [Plugin Config](#plugin-config) section.
 
-#### Trigger creation of certificate
+#### Create certificates
 
 Assume Kong proxy is accessible via http://mydomain.com and https://mydomain.com.
 
 ```bash
+# Trigger asynchronous creation from proxy requests
+# The following request returns immediately with Kong's default certificate
+# Wait up to 1 minute for the background process to finish
 $ curl https://mydomain.com -k
-# Returns Kong's default certificate
-# Wait up to 1 minute
+
+# OR create from Admin API synchronously with version >= 0.2.4
+# User can also use this endpoint to force "renew" a certificate
+$ curl http://localhost:8001/acme -d host=mydomain.com
+
+# Furthermore, it's possible to run a sanity test on your Kong setup
+# before creating any certificate
+$ curl http://localhost:8001/acme -d host=mydomain.com -d test_http_challenge_flow=true
+
 $ curl https://mydomain.com
 # Now gives you a valid Let's Encrypt certicate
+```
+
+#### Renew certificates
+
+The plugin automatically renews all certificate that are due for renewal everyday. Note the
+renewal config is stored in configured storage backend. If the storage is cleared or modified
+outside of Kong, renewal might not properly.
+
+It's also possible to actively trigger the renewal starting version 0.2.4. The following request
+schedules renewal in background and return immediately.
+
+```bash
+$ curl http://localhost:8001/acme -XPATCH
 ```
 
 ### Plugin Config
@@ -66,11 +91,11 @@ $ curl https://mydomain.com
 Name                | Required   | Default | Description
 -------------------:|------------|------------|------------
 config.account_email| Yes        |            | The account identifier, can be reused in different plugin instance.
-config.api_uri      |            |  `"https://acme-v02.api.letsencrypt.org"`   | The ACMEv2 API endpoint to use, the url should only contain root path. User might use [Let's Encrypt staging environemnt](https://letsencrypt.org/docs/staging-environment/)(`https://acme-staging-v02.api.letsencrypt.org`) during testing. Kong doesn't automatically delete staging certificates, if you use same domain to test and use in production, you will need to delete those certificates manaully after test.
-config.cert_type    |            |  `"rsa"`   | The certificate type to create, choice of `"rsa"` for RSA certificate or `"ecc"` for EC certificate.
+config.api_uri      |            |  `"https://acme-v02.api.letsencrypt.org/directory"`   | The ACMEv2 API endpoint to use. Users can specify the [Let's Encrypt staging environment](https://letsencrypt.org/docs/staging-environment/) (`https://acme-staging-v02.api.letsencrypt.org/directory`) for testing. Note that Kong doesn't automatically delete staging certificates: if you use same domain to test and use in production, you will need to delete those certificates manaully after test.
+config.cert_type    |            |  `"rsa"`   | The certificate type to create. The possible values are `"rsa"` for RSA certificate or `"ecc"` for EC certificate.
 config.domains      |            | `[]`       | The list of domains to create certificate for. To match subdomains under `example.com`, use `*.example.com`. Regex pattern is not supported. Note this config is only used to match domains, not to specify the Common Name or Subject Alternative Name to create certifcates; each domain will have its own certificate.
 config.renew_threshold_days|     |  `14`      | Days before expire to renew the certificate.
-config.storage      |            |  `"shm"`   | The backend storage type to use, choice of `"kong"`, `"shm"`, `"redis"`, `"consul"` or `"vault"`. In dbless mode, `"kong"` storage is unavailable.
+config.storage      |            |  `"shm"`   | The backend storage type to use. The possible values are `"kong"`, `"shm"`, `"redis"`, `"consul"`, or `"vault"`. In DB-less mode, `"kong"` storage is unavailable. Note that `"shm"` storage does not persist during Kong restarts and does not work for Kong running on different machines, so consider using one of `"kong"`, `"redis"`, `"consul"`, or `"vault"` in production.
 config.storage_config|           | (See below)| Storage configs for each backend storage.
 config.tos_accepted |            | `false`    | If you are using Let's Encrypt, you must set this to true to agree the [Terms of Service](https://letsencrypt.org/repository/).
 
@@ -91,21 +116,56 @@ config.tos_accepted |            | `false`    | If you are using Let's Encrypt, 
             "host": "127.0.0.1",
             "port": 8500,
             "token": null,
-            "kv_path": "acme"
+            "kv_path": "acme",
+            "timeout": 2000,
+            "https": false
         },
         "vault": {
             "host": "127.0.0.1",
             "port": 8200,
             "token": null,
-            "kv_path": "acme"
+            "kv_path": "acme",
+            "timeout": 2000,
+            "https": false,
+            "tls_verify": true,
+            "tls_server_name": null
         },
     }
 ```
 
-If you are using a cluster of Kong (multiple Kong instances running on different machines),
-consider using one of `"kong"`, `"redis"`, `"consul"` or `"vault"` to support inter-cluster communication.
-
 To configure storage type other than `kong`, please refer to [lua-resty-acme](https://github.com/fffonion/lua-resty-acme#storage-adapters).
+
+Note `tls_verify` and `tls_server_name` parameters for Vault are only supported from plugin version 0.2.7.
+
+Here's a sample declarative configuration with `redis` as storage:
+
+```yaml
+_format_version: "1.1"
+# this section is not necessary if there's already a route that matches
+# /.well-known/acme-challenge path with http protocol
+services:
+  - name: acme-dummy
+    url: http://127.0.0.1:65535
+    routes:
+      - name: acme-dummy
+        protocols:
+          - http
+        paths:
+          - /.well-known/acme-challenge
+plugins:
+  - name: acme
+    config:
+      account_email: example@myexample.com
+      domains:
+        - "*.example.com"
+        - "example.com"
+      tos_accepted: true
+      storage: redis
+      storage_config:
+        redis:
+          host: redis.service
+          port: 6379
+```
 
 ### Local testing and development
 
