@@ -1,5 +1,5 @@
 package = "kong-plugin-acme"
-version = "0.2.10-1"
+version = "0.4.0-1"
 source = {
    url = "git+https://github.com/Kong/kong-plugin-acme.git",
    tag = "0.2.10",
@@ -17,6 +17,7 @@ build = {
       ["kong.plugins.acme.daos"] = "kong/plugins/acme/daos.lua",
       ["kong.plugins.acme.handler"] = "kong/plugins/acme/handler.lua",
       ["kong.plugins.acme.migrations.000_base_acme"] = "kong/plugins/acme/migrations/000_base_acme.lua",
+      ["kong.plugins.acme.migrations.001_022_to_030"] = "kong/plugins/acme/migrations/001_022_to_030.lua",
       ["kong.plugins.acme.migrations.init"] = "kong/plugins/acme/migrations/init.lua",
       ["kong.plugins.acme.schema"] = "kong/plugins/acme/schema.lua",
       ["kong.plugins.acme.storage.kong"] = "kong/plugins/acme/storage/kong.lua"
