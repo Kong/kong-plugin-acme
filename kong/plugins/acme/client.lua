@@ -364,7 +364,11 @@ local function renew_certificate_storage(conf)
       err = update_certificate(conf, host, key)
       if err then
         kong.log.err("failed to renew certificate: ", err)
-        return
+        -- return
+        -- update_certificate could fail if the domain is no longer pointing to us (say http-01 fail)
+        -- which is common in our case. If we return it could block the renewal of rest of domains
+        -- To be solved in future updates - https://github.com/Kong/kong-plugin-acme/issues/48
+        goto renew_continue
       end
     end
 
