@@ -71,4 +71,46 @@ return {
       return kong.response.exit(202, { message = "Renewal process started successfully" })
     end,
   },
+  ['/acme-domains/:host'] = {
+    DELETE = function(self)
+      kong.log.err("HMMMMMMMM")
+      local host = self.params.host
+      local entity, err = kong.db.acme_domain:select_by_name(host)
+      if err then
+        kong.log.err("Error when selecting acme_domain: " .. err)
+        return nil
+      end
+      if not entity then
+        kong.log.err("Could not find acme_domain.")
+        return nil
+      end
+      local ok, err_0 = kong.db.acme_domain:delete({
+        id = entity.id,
+      })
+      if not ok then
+        kong.log.err("error while deleting acme_domain ", host, err_0)
+        return
+      end
+      local sni_entity, err = kong.db.snis:select_by_name(host)
+      if err then
+        kong.log.err("error finding sni entity: ", err)
+        return
+      end
+      kong.log.err(sni_entity)
+      local cert_id = sni_entity.certificate.id
+      local ok, err = kong.db.snis:delete({
+        id = sni_entity.id,
+      })
+      if not ok then
+        kong.log.err("error deleting certificate entity ", host, ": ", err)
+        return err
+      end
+      local ok, err_2 = kong.db.certificates:delete({
+        id = cert_id,
+      })
+      if not ok then
+        kong.log.err("error cleaning up certificate entity ", cert_id, ": ", err_2)
+      end
+    end
+  }
 }
