@@ -73,44 +73,48 @@ return {
   },
   ['/acme-domains/:host'] = {
     DELETE = function(self)
-      kong.log.err("HMMMMMMMM")
       local host = self.params.host
+      -- retrieve acme_domain for given host
       local entity, err = kong.db.acme_domain:select_by_name(host)
       if err then
         kong.log.err("Error when selecting acme_domain: " .. err)
-        return nil
+        return kong.response.exit(500, { message = "failed to retrieve acme domain: " .. err })
       end
-      if not entity then
-        kong.log.err("Could not find acme_domain.")
-        return nil
+      if entity then
+         -- delete acme_domain record for the retrieved entity id (for host)
+        local ok, err = kong.db.acme_domain:delete({
+          id = entity.id,
+        })
+        if not ok then
+          kong.log.err("error while deleting acme_domain: " ..  host .. " : " ..  err)
+          return kong.response.exit(500, { message = "failed to delete acme domain entry: " .. host .. " : " .. err })
+        end
+      else
+        kong.log.info("Could not find acme_domain: " .. host .. " ..continuing for sni_entity deletion")
+        -- continue to sni_entity deletion even if acme_domain doesn't exist
       end
-      local ok, err_0 = kong.db.acme_domain:delete({
-        id = entity.id,
-      })
-      if not ok then
-        kong.log.err("error while deleting acme_domain ", host, err_0)
-        return
-      end
+      -- retrieve sni entity for the given host
       local sni_entity, err = kong.db.snis:select_by_name(host)
       if err then
-        kong.log.err("error finding sni entity: ", err)
-        return
+        kong.log.err("error finding sni entity for: " .. host .. " : " .. err)
+        return kong.response.exit(500, { message = "failed to retrieve sni entry for host: " .. host .. " : " .. err })
       end
-      kong.log.err(sni_entity)
+      if not sni_entity then
+        kong.log.info("Could not find sni_entity for: " .. host .. " ..continuing for certificate record deletion")
+        return kong.response.exit(400, { message = "could not find sni_entity to delete corresponding certificate record"})
+      end
       local cert_id = sni_entity.certificate.id
-      local ok, err = kong.db.snis:delete({
-        id = sni_entity.id,
-      })
-      if not ok then
-        kong.log.err("error deleting certificate entity ", host, ": ", err)
-        return err
-      end
-      local ok, err_2 = kong.db.certificates:delete({
+      -- delete certificate for the sni_entity and sni_entity record
+      --- ..binded by foreign key constraint with certificate record
+      local ok, err = kong.db.certificates:delete({
         id = cert_id,
       })
       if not ok then
-        kong.log.err("error cleaning up certificate entity ", cert_id, ": ", err_2)
+        kong.log.err("error deleting certificate: " .. cert_id .. " for sni_entity:  " .. host .. " : " .. err)
+        return kong.response.exit(500, { message = "failed to delete certificate for: " .. host .. " : " .. err })
       end
+      -- After certificate is deleted successfully for the given host
+      return kong.response.exit(204, {})
     end
   }
 }
