@@ -6,8 +6,6 @@ jobs:
     env: KONG_VERSION=2.4.x
   - name: Kong EE 2.4.1.x
     env: KONG_VERSION=2.4.1.x
-  - name: Kong EE 1.5.0.x
-    env: KONG_VERSION=1.5.0.x
   - name: Nightly EE-master
     env: KONG_VERSION=nightly-ee POSTGRES=latest CASSANDRA=latest
   #- name: Nightly CE-master
