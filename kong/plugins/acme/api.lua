@@ -100,8 +100,8 @@ return {
         return kong.response.exit(500, { message = "failed to retrieve sni entry for host: " .. host .. " : " .. err })
       end
       if not sni_entity then
-        kong.log.info("Could not find sni_entity for: " .. host .. " ..continuing for certificate record deletion")
-        return kong.response.exit(400, { message = "could not find sni_entity to delete corresponding certificate record"})
+        kong.log.info("Could not find sni_entity for: " .. host)
+        return kong.response.exit(204, {})
       end
       local cert_id = sni_entity.certificate.id
       -- delete certificate for the sni_entity and sni_entity record
