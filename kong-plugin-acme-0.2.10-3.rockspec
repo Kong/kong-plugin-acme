@@ -1,5 +1,5 @@
 package = "kong-plugin-acme"
-version = "0.2.10-2"
+version = "0.2.10-3"
 source = {
    url = "git+https://github.com/Kong/kong-plugin-acme.git",
    tag = "0.2.10",
