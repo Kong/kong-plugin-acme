@@ -111,6 +111,7 @@ local function new(conf)
     storage_config = conf.storage_config[conf.storage],
     eab_kid = conf.eab_kid,
     eab_hmac_key = conf.eab_hmac_key,
+    preferred_chain = conf.preferred_chain,
   })
 end
 
