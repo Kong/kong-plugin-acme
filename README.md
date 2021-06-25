@@ -101,6 +101,7 @@ config.storage_config|           | (See below)| Storage configs for each backend
 config.tos_accepted |            | `false`    | If you are using Let's Encrypt, you must set this to true to agree the [Terms of Service](https://letsencrypt.org/repository/).
 config.eab_kid      |            |            | External account binding (EAB) key id. You usually don't need to set this unless it is explicitly required by the CA.
 config.eab_hmac_key |            |            | External account binding (EAB) base64-encoded URL string of the HMAC key. You usually don't need to set this unless it is explicitly required by the CA.
+config.preferred_chain |            |            | Select a preferrable chain that has root CA issuer name matches the given value. If it's unconfigured or no such chain is matched, the default chain will be selected.
 
 `config.storage_config` is a table for all possible storage types, by default it is:
 ```json
@@ -131,14 +132,21 @@ config.eab_hmac_key |            |            | External account binding (EAB) b
             "timeout": 2000,
             "https": false,
             "tls_verify": true,
-            "tls_server_name": null
+            "tls_server_name": null,
+            "auth_method": "token",
+            "auth_pass": null,
+            "auth_role": null,
+            "jwt_path": null
         },
     }
 ```
 
 To configure storage type other than `kong`, please refer to [lua-resty-acme](https://github.com/fffonion/lua-resty-acme#storage-adapters).
 
-Note `tls_verify` and `tls_server_name` parameters for Vault are only supported from plugin version 0.2.7.
+Note `tls_verify` and `tls_server_name` parameters for Vault are only supported from plugin version 0.2.7;
+K8S auth configurations `auth_method`, `auth_pass`, `auth_role` and `jwt_path` for Vault are only
+supported from plugin version 0.3.0.
+
 
 Here's a sample declarative configuration with `redis` as storage:
 
