@@ -71,7 +71,7 @@ return {
       return kong.response.exit(202, { message = "Renewal process started successfully" })
     end,
   },
-  ['/acme-domains/:host'] = {
+  ['/acme-domains/cascade/:host'] = {
     DELETE = function(self)
       local host = self.params.host
       -- retrieve acme_domain for given host
